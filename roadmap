@@ -1,0 +1,188 @@
+      
+Pair/
+├── cmd/Pair-cli/                 // Main application entry point & CLI command definitions
+│   └── main.go                          // Handles CLI argument parsing, initializes and runs the TUI or commands.
+├── pkg/
+│   ├── app/                             // Core application lifecycle and coordination
+│   │   └── app.go                       // Initializes all services (config, db, scrapers, trackers, etc.), starts TUI.
+│   ├── config/                          // Load & manage config (e.g., config.toml using Viper)
+│   │   ├── config.go                    // Struct defining all config options.
+│   │   └── paths.go                     // OS-specific paths for config, data, scrapers (uses os.UserConfigDir, etc.).
+│   ├── tui/                             // Terminal User Interface (e.g., using BubbleTea)
+│   │   ├── views/                       // Different screens/views
+│   │   │   ├── library_view.go          // Displays user's anime library.
+│   │   │   ├── anime_detail_view.go     // Shows details for a selected anime, episode list.
+│   │   │   ├── episode_selection_view.go// Allows picking an episode to play.
+│   │   │   ├── settings_view.go         // For app settings, tracker login, etc.
+│   │   │   └── scraper_management_view.go // Handles scraper repo listing, installation, updates.
+│   │   ├── components/                  // Reusable TUI elements (e.g., lists, input fields).
+│   │   └── tui.go                       // Main TUI application model, event loop.
+│   ├── database/                        // SQLite interaction (e.g., using GORM or sqlx)
+│   │   ├── database.go                  // DB connection, schema migration, CRUD helper functions.
+│   │   └── models/                      // Struct definitions for DB tables
+│   │       ├── local_anime.go           // Struct for 'local_anime' table (user's library).
+│   │       └── local_episode.go         // Struct for 'local_episodes' table (watched status, progress).
+│   ├── library/                         // Core logic for managing the user's anime list
+│   │   └── service.go                   // Functions for adding, removing, updating anime in the local DB.
+│   ├── playback/                        // MPV launching, control, timestamping, speed, skips
+│   │   ├── mpv_controller.go            // Interface for controlling MPV.
+│   │   ├── mpv_ipc_unix.go              // Implementation for MPV IPC using Unix domain sockets (Linux, macOS). (Conditional build)
+│   │   ├── mpv_ipc_windows.go           // Implementation for MPV IPC using named pipes (Windows). (Conditional build)
+│   │   ├── mpv_fallback.go              // Fallback if IPC fails (e.g., using --save-position-on-quit).
+│   │   └── service.go                   // Prepares and launches MPV with correct options, manages playback state.
+│   ├── scraper/                         // Scraper interface, manager, external CLI handling
+│   │   ├── interface.go                 // Defines `Scraper` interface and related structs (SearchResult, EpisodeInfo, StreamInfo).
+│   │   ├── manager.go                   // Discovers, loads, and provides access to scraper instances.
+│   │   ├── proxy_cli.go                 // `Scraper` implementation that calls an external CLI executable.
+│   │   └── repo_handler.go              // Fetches `index.json` from scraper repos, downloads/installs scraper CLIs.
+│   ├── tracker/                         // Generic tracker interface
+│   │   └── interface.go                 // Defines `Tracker` interface (Authenticate, Search, UpdateProgress, etc.).
+│   ├── anilist/                         // Anilist API client and implementation of tracker.Interface
+│   │   └── client.go                    // Handles Anilist API communication, OAuth.
+│   ├── mal/                             // MyAnimeList API client and implementation of tracker.Interface
+│   │   └── client.go                    // Handles MAL API communication, OAuth.
+│   ├── metadata/                        // External metadata fetching (fillers, images)
+│   │   ├── jikan.go                     // Jikan API client for fetching filler info, MAL metadata.
+│   │   └── image_fetcher.go             // Logic to fetch and cache images for rofi/TUI.
+│   ├── discord/                         // Discord Rich Presence logic
+│   │   └── rpc.go                       // Manages Discord RPC connection and updates.
+│   ├── utils/                           // Common helper functions
+│   │   ├── http_client.go               // Shared HTTP client with appropriate User-Agent, retries.
+│   │   ├── fs.go                        // Filesystem utilities (ensure dir exists, checksums).
+│   │   ├── exec.go                      // Helpers for running external commands (like rofi/fzf, or scraper CLIs).
+│   │   └── os_specific.go               // Small OS-specific utility functions if needed (e.g., opening a URL in browser).
+│   ├── platform/                        // NEW: Platform-specific initialization or utilities (if more extensive)
+│   │   ├── platform_windows.go          // Windows-specific setup (e.g., console handling). (Conditional build)
+│   │   ├── platform_unix.go             // Unix-like specific setup. (Conditional build)
+│   │   └── platform.go                  // Common platform interface or functions.
+├── data/                                  // User-specific data (location determined by config.Paths)
+│   ├── Pair.db                   // SQLite database file.
+│   ├── tokens/                          // For Anilist/MAL OAuth tokens.
+│   ├── scrapers/                        // Directory where downloaded scraper CLIs are stored.
+│   │   ├── some_scraper_id_v1.0/        // Each scraper in its own versioned subdirectory.
+│   │   │   └── scraper_executable       // The actual binary/script (could be .exe on Windows).
+│   │   │   └── scraper_metadata.json    // Stores the ScraperManifest for this installed scraper.
+│   ├── scraper_repos.json               // Stores user-added scraper repository URLs and names.
+│   └── logs/                            // Application logs.
+├── build/                               // Build scripts and assets for packaging
+│   ├── windows/                         // Windows specific build assets
+│   │   ├── Pair.iss              // Inno Setup Script for creating Windows installer.
+│   │   └── icon.ico                     // Application icon for Windows.
+│   ├── macos/                           // macOS specific build assets
+│   │   └── create_dmg.sh                // Script to package .app into a .dmg.
+│   │   └── Info.plist                   // macOS .app bundle Info.plist template.
+│   │   └── icon.icns                    // Application icon for macOS.
+│   ├── linux/                           // Linux specific build assets
+│   │   └── Pair.desktop          // .desktop file for Linux application menus.
+│   │   └── icon.png                     // Application icon for Linux.
+│   ├── goreleaser.yml                   // (Optional) GoReleaser configuration for automated builds & releases.
+├── assets/                              // Static assets embedded in the binary or used by installer
+│   └── default_cover.png                // A default cover image if one can't be fetched.
+├── go.mod
+├── go.sum
+└── config.toml.example                  // Example configuration file for users.
+
+    
+
+IGNORE_WHEN_COPYING_START
+Use code with caution.
+IGNORE_WHEN_COPYING_END
+
+
+pkg/config/paths.go:
+
+    Will use os.UserConfigDir(), os.UserCacheDir(), os.UserHomeDir() to determine appropriate default locations for config.toml, Pair.db, scrapers/ directory, etc., based on the OS.
+
+    Windows: C:\Users\Username\AppData\Roaming\Pair, C:\Users\Username\AppData\Local\Pair
+
+    macOS: ~/Library/Application Support/Pair, ~/Library/Caches/Pair
+
+    Linux: ~/.config/Pair, ~/.cache/Pair
+
+pkg/playback/mpv_ipc_*.go:
+
+    Use Go build tags (e.g., //go:build windows and //go:build !windows or //go:build linux darwin) to compile the correct IPC implementation.
+
+    Windows: MPV uses named pipes for IPC. The path is \\.\pipe\mpvsocket by default if --input-ipc-server is not specified with a full path.
+
+    Linux/macOS: MPV uses Unix domain sockets. The path is typically /tmp/mpvsocket or a path specified with --input-ipc-server.
+
+    The mpv_controller.go will define the interface, and service.go will instantiate the correct platform-specific implementation.
+
+pkg/scraper/repo_handler.go - DownloadAndInstallScraper:
+
+    When downloading scraper executables from a ScraperManifest, it must check manifest.ExecutableOS and manifest.ExecutableArch against runtime.GOOS and runtime.GOARCH to ensure a compatible binary is downloaded.
+
+    The index.json in scraper repositories should ideally list multiple ExecutableURL entries for different OS/Arch combinations for the same scraper ID and version.
+
+    On Windows, scraper CLIs would typically be .exe files. On Linux/macOS, they'd be extensionless executables or scripts with a shebang.
+
+    The os.Chmod(path, 0755) call to make executables runnable is primarily for Unix-like systems. Windows relies on file extensions (.exe, .bat, .com) or file associations rather than permission bits for executability in the same way. However, Go's os/exec will still execute .exe files correctly on Windows.
+
+build/windows/Pair.iss (Inno Setup Script):
+
+    This script defines how the Windows installer is created.
+
+    It will specify:
+
+        Application name, version, publisher.
+
+        Files to include (your compiled Pair-cli.exe, any DLLs if needed, config.toml.example).
+
+        Default installation directory (e.g., C:\Program Files\Pair).
+
+        Creation of Start Menu shortcuts.
+
+        Creation of desktop icons.
+
+        (Optional) Association with any custom file types if you had them.
+
+        (Optional) Registry entries.
+
+        Uninstaller creation.
+
+    You'd compile this .iss script using the Inno Setup Compiler (iscc.exe).
+
+build/macos/create_dmg.sh and Info.plist:
+
+    For macOS, applications are typically distributed as .app bundles inside .dmg disk images.
+
+    Info.plist contains metadata for the .app bundle (bundle ID, version, icon file, executable name).
+
+    A script (create_dmg.sh) would:
+
+        Create the .app bundle directory structure (Pair.app/Contents/MacOS/, Pair.app/Contents/Resources/).
+
+        Copy your compiled Go binary into Pair.app/Contents/MacOS/Pair-cli.
+
+        Copy Info.plist into Pair.app/Contents/.
+
+        Copy icon.icns into Pair.app/Contents/Resources/.
+
+        Use hdiutil to create a .dmg from the .app bundle.
+
+build/linux/Pair.desktop:
+
+    A standard .desktop file allows integration with Linux desktop environments (shows up in application menus, sets the icon).
+
+    It specifies Exec=/path/to/Pair-cli, Icon=/path/to/icon.png, Name=Pair, Categories=AudioVideo;Player;, etc.
+
+    Installation might involve copying this file to /usr/share/applications/ (system-wide) or ~/.local/share/applications/ (user-specific).
+
+build/goreleaser.yml:
+
+    GoReleaser can automate the entire build, packaging (including .app bundles, .deb, .rpm, .zip, .tar.gz), and release process for all platforms. It can also generate checksums and upload artifacts to GitHub Releases. This is highly recommended for managing cross-platform releases. It can even use Inno Setup if the compiler is in the PATH.
+
+pkg/utils/exec.go:
+
+    When running external tools like rofi or fzf, ensure these are available on the user's system or provide guidance.
+
+    For rofi image previews, the mechanism for passing icon paths is generally cross-platform if rofi itself is installed and configured.
+
+Conditional Compilation (//go:build tags):
+
+    Use these extensively in pkg/platform/ and pkg/playback/ to isolate OS-specific code.
+
+    Example in mpv_ipc_unix.go: //go:build linux || darwin
+
+    Example in mpv_ipc_windows.go: //go:build windows
