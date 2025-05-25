@@ -1,92 +1,94 @@
-      
 Pair/
-├── cmd/Pair-cli/                 // Main application entry point & CLI command definitions
-│   └── main.go                          // Handles CLI argument parsing, initializes and runs the TUI or commands.
-├── pkg/
-│   ├── app/                             // Core application lifecycle and coordination
-│   │   └── app.go                       // Initializes all services (config, db, scrapers, trackers, etc.), starts TUI.
-│   ├── config/                          // Load & manage config (e.g., config.toml using Viper)
-│   │   ├── config.go                    // Struct defining all config options.
-│   │   └── paths.go                     // OS-specific paths for config, data, scrapers (uses os.UserConfigDir, etc.).
-│   ├── tui/                             // Terminal User Interface (e.g., using BubbleTea)
-│   │   ├── views/                       // Different screens/views
-│   │   │   ├── library_view.go          // Displays user's anime library.
-│   │   │   ├── anime_detail_view.go     // Shows details for a selected anime, episode list.
-│   │   │   ├── episode_selection_view.go// Allows picking an episode to play.
-│   │   │   ├── settings_view.go         // For app settings, tracker login, etc.
-│   │   │   └── scraper_management_view.go // Handles scraper repo listing, installation, updates.
-│   │   ├── components/                  // Reusable TUI elements (e.g., lists, input fields).
-│   │   └── tui.go                       // Main TUI application model, event loop.
-│   ├── database/                        // SQLite interaction (e.g., using GORM or sqlx)
-│   │   ├── database.go                  // DB connection, schema migration, CRUD helper functions.
-│   │   └── models/                      // Struct definitions for DB tables
-│   │       ├── local_anime.go           // Struct for 'local_anime' table (user's library).
-│   │       └── local_episode.go         // Struct for 'local_episodes' table (watched status, progress).
-│   ├── library/                         // Core logic for managing the user's anime list
-│   │   └── service.go                   // Functions for adding, removing, updating anime in the local DB.
-│   ├── playback/                        // MPV launching, control, timestamping, speed, skips
-│   │   ├── mpv_controller.go            // Interface for controlling MPV.
-│   │   ├── mpv_ipc_unix.go              // Implementation for MPV IPC using Unix domain sockets (Linux, macOS). (Conditional build)
-│   │   ├── mpv_ipc_windows.go           // Implementation for MPV IPC using named pipes (Windows). (Conditional build)
-│   │   ├── mpv_fallback.go              // Fallback if IPC fails (e.g., using --save-position-on-quit).
-│   │   └── service.go                   // Prepares and launches MPV with correct options, manages playback state.
-│   ├── scraper/                         // Scraper interface, manager, external CLI handling
+├── cmd/pair/                     // Main application entry point (CLI & TUI Launcher)
+│   └── main.go                          // Parses CLI flags, initializes core services, starts the TUI or executes direct commands.
+├── pkg/                                 // Internal Go packages (library code)
+│   ├── appcore/                         // Core application services and lifecycle management
+│   │   ├── app.go                       // Main application struct, initializes and wires up all services.
+│   │   ├── config_service.go            // Manages loading, accessing, and saving application configuration.
+│   │   ├── db_service.go                // Manages database connection and provides access to repositories.
+│   │   └── log_service.go               // Configures and provides access to the application logger.
+│   ├── config/                          // Configuration loading and data structures
+│   │   ├── types.go                     // Defines the main Config struct mirroring config.toml.
+│   │   └── paths.go                     // OS-aware functions to get paths for config, data, cache, scrapers.
+│   ├── tui/                             // Terminal User Interface (BubbleTea or similar)
+│   │   ├── app_model.go                 // Root model for the TUI application, handles global events and views.
+│   │   ├── views/                       // Different screens/views presented to the user
+│   │   │   ├── library_view.go          // View for browsing the user's anime library.
+│   │   │   ├── anime_details_view.go    // View for showing detailed info about an anime and its episodes.
+│   │   │   ├── scraper_manager_view.go  // View for managing scraper repositories and installing/uninstalling scrapers.
+│   │   │   └── settings_view.go         // View for application settings, tracker logins, etc.
+│   │   └── components/                  // Reusable TUI components (custom lists, inputs, modals).
+│   ├── data/                            // Data access layer (repositories interacting with the database)
+│   │   ├── models/                      // Database entity structs (GORM models or similar)
+│   │   │   ├── pair.go                 // `LocalAnime` struct for the anime library table.
+│   │   │   └── episode.go               // `LocalEpisode` struct for episode progress and details.
+│   │   └── anime_repository.go          // CRUD operations for `LocalAnime`.
+│   │   └── episode_repository.go        // CRUD operations for `LocalEpisode`.
+│   ├── library/                         // Business logic for the user's anime library
+│   │   └── service.go                   // Functions to add anime, update progress, link to trackers, manage local data.
+│   ├── playback/                        // Video playback management
+│   │   ├── mpv/                         // MPV specific logic
+│   │   │   ├── controller.go            // Defines an interface for MPV control (Play, Pause, GetPosition, etc.).
+│   │   │   ├── ipc_client_unix.go       // MPV IPC client for Linux/macOS (Unix domain sockets). (//go:build linux darwin)
+│   │   │   ├── ipc_client_windows.go    // MPV IPC client for Windows (named pipes). (//go:build windows)
+│   │   │   └── ipc_client_noop.go       // No-op IPC client if IPC is disabled or fails. (//go:build !linux,!darwin,!windows or as fallback)
+│   │   └── service.go                   // Prepares MPV command, launches player, handles skip logic, saves progress.
+   ├── scraper/                         // Scraper interface, manager, external CLI handling
 │   │   ├── interface.go                 // Defines `Scraper` interface and related structs (SearchResult, EpisodeInfo, StreamInfo).
 │   │   ├── manager.go                   // Discovers, loads, and provides access to scraper instances.
 │   │   ├── proxy_cli.go                 // `Scraper` implementation that calls an external CLI executable.
 │   │   └── repo_handler.go              // Fetches `index.json` from scraper repos, downloads/installs scraper CLIs.
-│   ├── tracker/                         // Generic tracker interface
-│   │   └── interface.go                 // Defines `Tracker` interface (Authenticate, Search, UpdateProgress, etc.).
-│   ├── anilist/                         // Anilist API client and implementation of tracker.Interface
-│   │   └── client.go                    // Handles Anilist API communication, OAuth.
-│   ├── mal/                             // MyAnimeList API client and implementation of tracker.Interface
-│   │   └── client.go                    // Handles MAL API communication, OAuth.
-│   ├── metadata/                        // External metadata fetching (fillers, images)
-│   │   ├── jikan.go                     // Jikan API client for fetching filler info, MAL metadata.
-│   │   └── image_fetcher.go             // Logic to fetch and cache images for rofi/TUI.
-│   ├── discord/                         // Discord Rich Presence logic
-│   │   └── rpc.go                       // Manages Discord RPC connection and updates.
-│   ├── utils/                           // Common helper functions
-│   │   ├── http_client.go               // Shared HTTP client with appropriate User-Agent, retries.
-│   │   ├── fs.go                        // Filesystem utilities (ensure dir exists, checksums).
-│   │   ├── exec.go                      // Helpers for running external commands (like rofi/fzf, or scraper CLIs).
-│   │   └── os_specific.go               // Small OS-specific utility functions if needed (e.g., opening a URL in browser).
-│   ├── platform/                        // NEW: Platform-specific initialization or utilities (if more extensive)
-│   │   ├── platform_windows.go          // Windows-specific setup (e.g., console handling). (Conditional build)
-│   │   ├── platform_unix.go             // Unix-like specific setup. (Conditional build)
-│   │   └── platform.go                  // Common platform interface or functions.
-├── data/                                  // User-specific data (location determined by config.Paths)
-│   ├── Pair.db                   // SQLite database file.
-│   ├── tokens/                          // For Anilist/MAL OAuth tokens.
-│   ├── scrapers/                        // Directory where downloaded scraper CLIs are stored.
-│   │   ├── some_scraper_id_v1.0/        // Each scraper in its own versioned subdirectory.
-│   │   │   └── scraper_executable       // The actual binary/script (could be .exe on Windows).
-│   │   │   └── scraper_metadata.json    // Stores the ScraperManifest for this installed scraper.
-│   ├── scraper_repos.json               // Stores user-added scraper repository URLs and names.
-│   └── logs/                            // Application logs.
-├── build/                               // Build scripts and assets for packaging
-│   ├── windows/                         // Windows specific build assets
-│   │   ├── Pair.iss              // Inno Setup Script for creating Windows installer.
-│   │   └── icon.ico                     // Application icon for Windows.
-│   ├── macos/                           // macOS specific build assets
-│   │   └── create_dmg.sh                // Script to package .app into a .dmg.
-│   │   └── Info.plist                   // macOS .app bundle Info.plist template.
-│   │   └── icon.icns                    // Application icon for macOS.
-│   ├── linux/                           // Linux specific build assets
-│   │   └── Pair.desktop          // .desktop file for Linux application menus.
-│   │   └── icon.png                     // Application icon for Linux.
-│   ├── goreleaser.yml                   // (Optional) GoReleaser configuration for automated builds & releases.
-├── assets/                              // Static assets embedded in the binary or used by installer
-│   └── default_cover.png                // A default cover image if one can't be fetched.
-├── go.mod
-├── go.sum
-└── config.toml.example                  // Example configuration file for users.
-
-    
-
-IGNORE_WHEN_COPYING_START
-Use code with caution.
-IGNORE_WHEN_COPYING_END
+  ├── tracker/                         // External tracking services (Anilist, MAL)
+│   │   ├── contract/                    // Defines the `Tracker` interface and common DTOs.
+│   │   │   ├── interface.go
+│   │   │   └── types.go
+│   │   ├── anilist/                     // Anilist specific implementation
+│   │   │   └── client.go
+│   │   ├── mal/                         // MyAnimeList specific implementation
+│   │   │   └── client.go
+│   │   └── service.go                   // Manages active tracker, authentication, and dispatches calls.
+│   ├── metadata/                        // Fetching additional metadata
+│   │   ├── jikan/                       // Jikan API client for MAL data (fillers, extended info).
+│   │   │   └── client.go
+│   │   └── imagecache/                  // Logic for fetching and caching images.
+│   │       └── service.go
+│   ├── discordrpc/                      // Discord Rich Presence integration
+│   │   └── service.go
+│   ├── utils/                           // General utility functions
+│   │   ├── http.go                      // Shared HTTP client configuration.
+│   │   ├── fs.go                        // Filesystem operations (checksum, mkdirall, path exists).
+│   │   ├── exec.go                      // Helpers for executing external commands (rofi, fzf, scraper CLIs).
+│   │   └── platform.go                  // Small platform-specific utilities (e.g., opening URL in browser).
+├── data_user/                           // Directory for all user-specific runtime data (actual location OS-dependent, see config.Paths)
+│   ├── pair.db                   // SQLite database file.
+│   ├── config.toml                      // User's active configuration file (copied from example on first run).
+│   ├── logs/                            // Log files.
+│   │   └── app.log
+│   ├── scrapers/                        // Root directory where downloaded scraper CLI executables are stored.
+│   │   ├── <scraper_id_version>/        // e.g., "gogoanime_v1.2"
+│   │   │   ├── <executable_name>        // e.g., "gogoanime_scraper" or "gogoanime_scraper.exe"
+│   │   │   └── manifest.json            // Copy of the ScraperManifest for this installed scraper.
+│   ├── scraper_repositories.json        // User's list of added scraper repository URLs.
+│   └── tokens/                          // OAuth tokens for trackers.
+│       ├── anilist.json
+│       └── mal.json
+├── build/                               // Build scripts, packaging assets, and installer configurations
+│   ├── goreleaser.yml                   // GoReleaser configuration for cross-platform builds and releases.
+│   ├── windows/
+│   │   ├── pair.iss              // Inno Setup script for Windows installer.
+│   │   └── icon.ico
+│   ├── macos/
+│   │   ├── Info.plist.tmpl              // Template for macOS .app bundle.
+│   │   └── icon.icns
+│   │   └── create_dmg.sh                // (Optional if not using GoReleaser for DMG)
+│   ├── linux/
+│   │   ├── pair.desktop          // .desktop file for Linux.
+│   │   └── icon.png
+├── assets/                              // Static assets to be embedded or packaged
+│   └── config.toml.example              // Example configuration to be copied for the user on first run.
+├── go.mod                               // Go module definition.
+├── go.sum                               // Go module checksums.
+└── README.md                            // Project overview, build instructions, etc.
 
 
 pkg/config/paths.go:
