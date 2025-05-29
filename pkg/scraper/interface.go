@@ -12,7 +12,7 @@ type ScraperInfo struct {
 type SearchResult struct {
 	ID              string   `json:"id"`                        // Unique identifier for the anime within this scraper
 	Title           string   `json:"title"`                     // Primary title of the anime
-	AlternateTitles []string `json:"alternateTitles,omitempty"` // Alternative titles (e.g., English, Japanese, etc.)
+	AlternateTitles map[string]string `json:"alternateTitles,omitempty"` // Alternative titles with language codes (e.g., "en": "English Title", "ja": "Japanese Title")
 	TotalEpisodes   int      `json:"totalEpisodes"`             // Total number of episodes available
 	Type            string   `json:"type,omitempty"`            // Type of media (TV, Movie, OVA, etc.)
 	Year            int      `json:"year,omitempty"`            // Release year
