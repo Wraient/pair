@@ -33,12 +33,12 @@ Pair/
 │   │   │   ├── ipc_client_windows.go    // MPV IPC client for Windows (named pipes). (//go:build windows)
 │   │   │   └── ipc_client_noop.go       // No-op IPC client if IPC is disabled or fails. (//go:build !linux,!darwin,!windows or as fallback)
 │   │   └── service.go                   // Prepares MPV command, launches player, handles skip logic, saves progress.
-   ├── scraper/                         // Scraper interface, manager, external CLI handling
+│   ├── scraper/                         // Scraper interface, manager, external CLI handling
 │   │   ├── interface.go                 // Defines `Scraper` interface and related structs (SearchResult, EpisodeInfo, StreamInfo).
 │   │   ├── manager.go                   // Discovers, loads, and provides access to scraper instances.
 │   │   ├── proxy_cli.go                 // `Scraper` implementation that calls an external CLI executable.
 │   │   └── repo_handler.go              // Fetches `index.json` from scraper repos, downloads/installs scraper CLIs.
-  ├── tracker/                         // External tracking services (Anilist, MAL)
+│   ├── tracker/                         // External tracking services (Anilist, MAL)
 │   │   ├── contract/                    // Defines the `Tracker` interface and common DTOs.
 │   │   │   ├── interface.go
 │   │   │   └── types.go
