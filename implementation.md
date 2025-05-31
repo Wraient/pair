@@ -70,8 +70,8 @@ total_episodes = 24
 3. if tracker changed, search for anime in the tracker, ask user to select correct anime, if unable to select tracker, give option to search for custom name or use old tracker.
 4. `tracking = "tracker:id"` format to specify id of anime, remove it after updating tracker.
 5. Do not change db until it is complete.
-
 # Tracker Sync
+
 - User can edit `.config/pair/anime_tracking.toml` for a friendly way to edit.
 - Upstream data would take precedence.
 - If user edit > database: update
@@ -139,20 +139,24 @@ getFilterList() -> AnimeFilterList
 
 ### Pair
 
-Rate limit
-Anime Search
+Rate limit (per minute)
 API Data from scraper (if official API, api data would be structured)
+
 Anime {
+	id
+	title
+	alternative title (list)
 	Genre
 	Episodes
 	Sub/Dub
-	Synopsis
-	Cover url
+	description
+	thumbnail url
 	Tags
 	Status
 	Author
 	Release Year
 }
+
 Episode {
 	Synopsis
 	Title
@@ -166,10 +170,99 @@ Episode {
 - `1002`: Crunchyroll
 - `1003`: Funimation
 
+`anime-tool` is binary of an extension.
 
 expected JSON outputs for the `anime-tool`, covering the Aniyomi interface functions and the provided command-line options.
 
-1. Source info
+```
+anime-tool -h
+```
+
+```
+Usage: anime-tool [OPTIONS] COMMAND [ARGS]...
+
+A command-line tool for interacting with anime video sources.
+
+Options:
+  -h, --help  Show this message and exit.
+
+Commands:
+  details       Get detailed information about an anime.
+  episodes      Get the list of episodes for an anime.
+  extension-info Get information about a specific extension.
+  filters       Get the list of available filters for a source.
+  latest        Get the latest anime updates from a source.
+  list-sources  List all available anime video sources.
+  magnet-link   Get the magnet link for a torrent anime episode.
+  popular       Get popular anime from a source.
+  related       Get related anime for a given anime.
+  search        Search for anime on a source.
+  source-info   Get information about a specific anime video source.
+  stream-url    Get the direct video stream URL for an anime episode.
+
+Examples:
+
+  # Get information about the Crunchyroll extension
+  anime-tool extension-info
+
+  # Get information about source with ID 1002 (Crunchyroll)
+  anime-tool source-info 1002
+
+  # Get popular anime from source 1002 (Crunchyroll), page 1
+  anime-tool popular 1002 --page 1
+
+  # Get latest updates from source 1001 (Nyaa), page 1
+  anime-tool latest 1001 --page 1
+
+  # Search for "Attack on Titan" on source 1002 (Crunchyroll), page 1
+  anime-tool search 1002 --query "Attack on Titan" --page 1
+
+  # Search with filters on source 1002 (Crunchyroll)
+  anime-tool search 1002 --query "" --filters '{"Genres": ["Action"], "Status": "Ongoing"}' --page 1
+
+  # Get details for the anime at the given URL from source 1003 (Funimation)
+  anime-tool details 1003 --anime https://www.funimation.com/shows/my-hero-academia/
+
+  # Get episodes for the anime at the given URL from source 1002 (Crunchyroll)
+  anime-tool episodes 1002 --anime https://www.crunchyroll.com/frieren-beyond-journeys-end
+
+  # Get stream URL for episode at the given URL from source 1002 (Crunchyroll), episode number (if applicable)
+  anime-tool stream-url 1002 --anime https://www.crunchyroll.com/watch/... --episode 1
+
+  # Get magnet link for episode at the given URL from source 1001 (Nyaa)
+  anime-tool magnet-link 1001 --anime https://nyaa.si/view/1234567 --episode 1
+
+  # Get available filters for source with ID (replace 'source_id' with actual ID)
+  anime-tool filters source_id
+
+  # Get related anime for the anime at the given URL from source 1002 (Crunchyroll), page 1
+  anime-tool related 1002 --anime https://www.crunchyroll.com/frieren-beyond-journeys-end --page 1
+```
+
+1. Extension info
+```
+anime-tool extension-info
+```
+
+```
+  {
+    "name": "Crunchyroll",
+    "pkg": "anime-crunchyroll",
+    "lang": "en",
+    "version": "2.1",
+    "nsfw": false,
+    "sources": [
+      {
+        "name": "Crunchyroll",
+        "lang": "en",
+        "id": "a1b2c3d4e5f6",
+        "baseUrl": "https://www.crunchyroll.com/"
+      }
+    ]
+  }
+```
+
+2. Source info
 
 ```
 anime-tool source-info 1002
@@ -182,13 +275,14 @@ anime-tool source-info 1002
   "baseUrl": "https://www.crunchyroll.com/",
   "language": "en",
   "nsfw": false,
+  "ratelimit": 20,
   "supportsLatest": true,
   "supportsSearch": true,
   "supportsRelatedAnime": true
 }
 ```
 
-2. Popular anime
+3. Popular anime
 
 ```
 anime-tool popular 1002 --page 1
@@ -220,7 +314,7 @@ anime-tool popular 1002 --page 1
 ]
 ```
 
-3. Get Latest updates
+4. Get Latest updates
 
 ```
 anime-tool latest 1001 --page 1
@@ -252,7 +346,7 @@ anime-tool latest 1001 --page 1
 ]
 ```
 
-4. Search Anime
+5. Search Anime
 
 ```
 anime-tool search 1002 --query "Attack on Titan" --page 1
@@ -314,7 +408,7 @@ anime-tool search 1002 --query "" --filters '{"Genres": ["Action"], "Status": "O
 ]
 ```
 
-5. Get anime details
+6. Get anime details
 
 ```
 anime-tool details 1003 --anime anime_id
@@ -333,7 +427,7 @@ anime-tool details 1003 --anime anime_id
 }
 ```
 
-6. Get Episode list
+7. Get Episode list
 
 ```
 anime-tool episodes 1002 --anime anime_id
@@ -359,7 +453,7 @@ anime-tool episodes 1002 --anime anime_id
 ]
 ```
 
-7. Get Video List (Stream link)
+8. Get Video List (Stream link)
 
 ```
 anime-tool stream-url 1002 --anime anime_id --episode int
@@ -439,7 +533,7 @@ anime-tool magnet-link 1001 --anime anime_id --episode int
 }
 ```
 
-8.  Get Filter List
+9.  Get Filter List
 
 ```
 anime-tool filters source_id
@@ -492,7 +586,7 @@ anime-tool filters source_id
 }
 ```
 
-9. Get Related Anime
+10. Get Related Anime
 
 ```
 anime-tool related 1002 --anime anime_id --page 1
