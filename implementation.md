@@ -1,3 +1,9 @@
+# To be planned
+- Headers in episode video data
+- Download system
+- Api limit for Anilist and MAL
+- Database Migration with new fields (Schema)
+
 # Stack
 
 Logging solution - Zap
@@ -20,7 +26,7 @@ Subtitles - opensubtitles.org
 	- Change Language
 	- Change Tracker
 - Show All Anime -> Same as Currently watching
-- Extensions -> Install new extensions, Install new Repo, Update extensions, Remove extensions
+- Extensions -> Install new extensions, Install new Repo, Update extensions, Remove extensions, Reinstall extensions
 - Settings -> Change Config, Update Rofi theme, Update Pair
 - Quit
 
@@ -616,6 +622,17 @@ anime-tool related 1002 --anime anime_id --page 1
   }
   // ... more related anime
 ]
+```
+
+11. Error handling
+
+```
+{
+  "error": {
+    "message": "An unexpected error occurred.",
+    "code": 500
+  }
+}
 ```
 
 ## Installation
