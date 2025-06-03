@@ -78,12 +78,18 @@ total_episodes = 24
 5. Do not change db until it is complete.
 # Tracker Sync
 
+- default tracker is local, when user changes default tracker to upstream tracker keep already local anime local.
+- user can change tracker for each anime in anime specific tracker setting.
+- when user changes tracker from local to upstream for a specific anime search for anime in the tracker using the title of that anime and let user select it, there should be an option to let user put their own name for the anime if we can not find the anime. 
 - User can edit `.config/pair/anime_tracking.toml` for a friendly way to edit.
 - Upstream data would take precedence.
 - If user edit > database: update
 - if user edit < database: do not update
 - if upstream > database: update
 - if upstream < database: update
+- Update upstream and database after episode is completed
+- keep updating database playback time and speed every second.
+
 
 # Extensions
 
@@ -663,6 +669,10 @@ anime-tool related 1002 --anime anime_id --page 1
 ## Updating
 - binaries would be updated when user runs extension update in settings
 - Version information of binaries would be stored in the database, it would be checked with binary name (binary name contains the version information), if any discrepancy is found, update extension and update database.
+
+## Details
+- Each extension repo has multiple extentions, let user install which ever they want.
+- Store installed extension in db and find its source list and scrapper list, and store it in db, if un successful remove extension and tell user extension is not usable.
 
 # Discord RPC
 
