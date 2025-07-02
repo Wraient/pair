@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/wraient/pair/pkg/config"
+	"github.com/wraient/pair/pkg/database"
 	"github.com/wraient/pair/pkg/tracker"
 	"github.com/wraient/pair/pkg/ui"
 )
@@ -16,20 +17,48 @@ func (a *App) handleCurrentlyWatching(ctx context.Context) error {
 	// Get the database connection
 	db := config.GetDB()
 
-	// Get all anime from the database first
+	var syncErrors []error
+
+	// Sync with all available trackers (same as Show All)
+	err := a.syncWithTrackers(ctx, db, &syncErrors)
+	if err != nil {
+		return fmt.Errorf("failed to sync with trackers: %w", err)
+	}
+
+	// Get currently watching anime from the database after sync
 	entries, err := db.GetCurrentlyWatchingAnime()
 	if err != nil {
 		return fmt.Errorf("failed to get watching entries: %w", err)
 	}
 
-	// Convert to UserAnimeEntry format and create a map for easy lookup
+	// Convert to UserAnimeEntry format
 	watchingEntries := make([]tracker.UserAnimeEntry, 0)
-	localEntriesMap := make(map[string]tracker.UserAnimeEntry)
 
 	for _, entry := range entries {
-		tracking, err := db.GetAnimeTracking(entry.ID, string(a.config.Tracking.Service))
-		if err != nil && err != sql.ErrNoRows {
-			return fmt.Errorf("failed to get tracking info: %w", err)
+		// Try to get tracking info from the primary service first
+		var tracking *database.AnimeTracking
+		var err error
+
+		if a.config.Tracking.Service != "" {
+			tracking, err = db.GetAnimeTracking(entry.ID, string(a.config.Tracking.Service))
+			if err != nil && err != sql.ErrNoRows {
+				return fmt.Errorf("failed to get tracking info: %w", err)
+			}
+		}
+
+		// If no tracking from primary service, get from any available tracker
+		if tracking == nil {
+			allTrackings, err := db.GetAllAnimeTracking(entry.ID)
+			if err != nil {
+				return fmt.Errorf("failed to get all tracking info: %w", err)
+			}
+
+			// Use the most recently updated tracking info
+			for _, t := range allTrackings {
+				if tracking == nil || t.LastUpdated.After(tracking.LastUpdated) {
+					tracking = t
+				}
+			}
 		}
 
 		userEntry := tracker.UserAnimeEntry{
@@ -58,59 +87,6 @@ func (a *App) handleCurrentlyWatching(ctx context.Context) error {
 		}
 
 		watchingEntries = append(watchingEntries, userEntry)
-		localEntriesMap[userEntry.ID] = userEntry
-	}
-
-	// Try to sync with remote trackers if available
-	t, err := a.trackerMgr.GetTracker(string(a.config.Tracking.Service))
-	if err == nil && t.IsAuthenticated() {
-		remoteEntries, err := t.GetUserAnimeList(ctx)
-		if err == nil {
-			for _, remoteEntry := range remoteEntries {
-				if remoteEntry.Status != tracker.StatusWatching {
-					continue
-				}
-
-				localEntry, exists := localEntriesMap[remoteEntry.ID]
-				if !exists {
-					// New entry from remote, add to local
-					watchingEntries = append(watchingEntries, remoteEntry)
-					// Update local database
-					err := t.UpdateAnimeStatus(ctx, remoteEntry.ID, remoteEntry.Status, remoteEntry.Progress, remoteEntry.Score)
-					if err != nil {
-						fmt.Printf("Failed to update local database for new entry %s: %v\n", remoteEntry.Title, err)
-					}
-				} else {
-					// Entry exists in both places, handle sync
-					if remoteEntry.LastUpdated.After(localEntry.LastUpdated) {
-						// Remote is newer
-						if remoteEntry.Progress > localEntry.Progress {
-							// Remote has higher episode count, update local
-							err := t.UpdateAnimeStatus(ctx, remoteEntry.ID, remoteEntry.Status, remoteEntry.Progress, remoteEntry.Score)
-							if err != nil {
-								fmt.Printf("Failed to update local progress for %s: %v\n", remoteEntry.Title, err)
-							}
-							// Update the entry in our list
-							for i, entry := range watchingEntries {
-								if entry.ID == remoteEntry.ID {
-									watchingEntries[i] = remoteEntry
-									break
-								}
-							}
-						}
-					} else {
-						// Local is newer
-						if localEntry.Progress > remoteEntry.Progress {
-							// Local has higher episode count, update remote
-							err := t.UpdateAnimeStatus(ctx, localEntry.ID, localEntry.Status, localEntry.Progress, localEntry.Score)
-							if err != nil {
-								fmt.Printf("Failed to update remote progress for %s: %v\n", localEntry.Title, err)
-							}
-						}
-					}
-				}
-			}
-		}
 	}
 
 	// If we have any entries, show them
@@ -168,6 +144,14 @@ func (a *App) handleCurrentlyWatching(ctx context.Context) error {
 		}
 	} else {
 		fmt.Println("No currently watching anime found")
+	}
+
+	// Log any sync errors that occurred
+	if len(syncErrors) > 0 {
+		fmt.Println("\nSync errors occurred:")
+		for _, err := range syncErrors {
+			fmt.Printf("- %v\n", err)
+		}
 	}
 
 	return nil
